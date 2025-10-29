@@ -17,6 +17,7 @@ export default function ChatInterface() {
     const [apiKey, setApiKey] = useState('');
     const [developerMessage, setDeveloperMessage] = useState('You are a helpful AI assistant.');
     const [isLoading, setIsLoading] = useState(false);
+    const [isThinking, setIsThinking] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +45,7 @@ export default function ChatInterface() {
         setMessages(prev => [...prev, userMessage]);
         setInputMessage('');
         setIsLoading(true);
+        setIsThinking(true);
         setError(null);
 
         try {
@@ -80,6 +82,7 @@ export default function ChatInterface() {
 
             const decoder = new TextDecoder();
             let done = false;
+            let receivedFirstChunk = false;
 
             while (!done) {
                 const { value, done: readerDone } = await reader.read();
@@ -87,6 +90,10 @@ export default function ChatInterface() {
 
                 if (value) {
                     const chunk = decoder.decode(value);
+                    if (!receivedFirstChunk) {
+                        receivedFirstChunk = true;
+                        setIsThinking(false);
+                    }
                     setMessages(prev =>
                         prev.map(msg =>
                             msg.id === assistantMessage.id
@@ -100,6 +107,7 @@ export default function ChatInterface() {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setIsLoading(false);
+            setIsThinking(false);
         }
     };
 
@@ -190,7 +198,7 @@ export default function ChatInterface() {
                                 </div>
                             </div>
                         ))}
-                        {isLoading && (
+                        {isThinking && (
                             <div className="flex justify-start">
                                 <div className="bg-gray-50 text-gray-800 px-4 py-3 rounded-xl border border-gray-200 shadow-sm">
                                     <div className="flex items-center space-x-3">

@@ -49,7 +49,13 @@ export default function ChatInterface() {
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:8000/api/chat', {
+            // Use relative path - works in both dev and production on Vercel
+            // In development, you'll need to run the backend separately
+            // In production, Vercel will route /api/* to the serverless function
+            const apiUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+                ? 'http://localhost:8000/api/chat'
+                : '/api/chat';
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

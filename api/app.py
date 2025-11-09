@@ -10,6 +10,9 @@ import os
 from typing import Optional
 
 # Initialize FastAPI application with a title
+# Routes are defined without /api prefix for Vercel compatibility
+# For local dev, access at /api/chat and /api/health (when mounted)
+# For Vercel, api/chat.py automatically routes to /api/chat
 app = FastAPI(title="OpenAI Chat API")
 
 # Configure CORS (Cross-Origin Resource Sharing) middleware
@@ -31,7 +34,9 @@ class ChatRequest(BaseModel):
     api_key: str          # OpenAI API key for authentication
 
 # Define the main chat endpoint that handles POST requests
-@app.post("/api/chat")
+# On Vercel, this will be accessible at /api/chat (Vercel routes api/chat.py to /api/chat)
+# For local dev with uvicorn, we'll need to access it at /api/chat
+@app.post("/chat")
 async def chat(request: ChatRequest):
     try:
         # Initialize OpenAI client with the provided API key
@@ -62,12 +67,26 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Define a health check endpoint to verify API status
-@app.get("/api/health")
+@app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+# For local development with uvicorn, we need to mount at /api
+# Create a main app that mounts our API app
+_main_app = None
+
+def get_main_app():
+    """Get the main app with /api mount for local development"""
+    global _main_app
+    if _main_app is None:
+        from fastapi import FastAPI
+        _main_app = FastAPI()
+        _main_app.mount("/api", app)
+    return _main_app
 
 # Entry point for running the application directly
 if __name__ == "__main__":
     import uvicorn
-    # Start the server on all network interfaces (0.0.0.0) on port 8000
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Use the mounted app for local development
+    # Routes will be available at /api/chat and /api/health
+    uvicorn.run(get_main_app(), host="0.0.0.0", port=8000)
